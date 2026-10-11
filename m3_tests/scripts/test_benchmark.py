@@ -274,14 +274,41 @@ def agent(**cases: tuple[int, int]) -> dict:
 
 
 def test_agent_rates_compare_as_fractions_not_counts() -> None:
-    base = agent(a=(1, 1), b=(2, 3), c=(3, 3))
-    now = agent(a=(3, 3), b=(1, 3), c=(2, 3))
-    found = statuses(bm.compare_agent(base, now))
-    assert found == {
-        "Agent prompt: a": bm.SAME,  # 1/1 and 3/3 are the same rate
-        "Agent prompt: b": bm.DOWN,
-        "Agent prompt: c": bm.DOWN,
-    }
+    found = statuses(bm.compare_agent(agent(a=(1, 1), b=(1, 1)), agent(a=(3, 3), b=(1, 3))))
+    assert found["Agent prompt: a"] == bm.SAME  # 1/1 and 3/3 are the same rate
+    assert found["Agent prompt: b"] == bm.DOWN  # 1/3 is two trials below 1/1
+
+
+@pytest.mark.parametrize(
+    ("before", "after", "dropped"),
+    [
+        ((3, 3), (3, 3), False),
+        ((3, 3), (2, 3), False),  # one extra miss in a 3-trial night is tolerated
+        ((3, 3), (1, 3), True),  # two are not
+        ((3, 3), (0, 3), True),
+        ((1, 1), (2, 3), False),  # a 1-trial file against a 3-trial night: 2/3 is exactly the floor
+        ((1, 1), (1, 3), True),
+        ((2, 3), (1, 3), False),
+        ((2, 3), (0, 3), True),
+        ((5, 5), (4, 5), False),  # tolerance is one trial of the new run: 4/5 >= 1 - 1/5
+        ((5, 5), (3, 5), True),
+        ((1, 1), (0, 1), False),  # edge: with 1 trial the floor is 0
+        ((0, 3), (0, 3), False),
+        ((1, 1), (0, 0), True),  # nothing measured
+    ],
+)
+def test_the_agent_tolerance_is_one_trial_of_the_new_run(
+    before: tuple[int, int], after: tuple[int, int], dropped: bool
+) -> None:
+    old = {"tool": "t", "passed": before[0], "total": before[1]}
+    new = {"tool": "t", "passed": after[0], "total": after[1]}
+    assert bm.agent_case_dropped(old, new) is dropped
+
+
+def test_a_dip_inside_the_tolerance_is_shown_but_does_not_fail() -> None:
+    rows = bm.compare_agent(agent(a=(3, 3)), agent(a=(2, 3)))
+    assert statuses(rows) == {"Agent prompt: a": bm.DIPPED}
+    assert not bm.regressions(rows) and not bm.improvements(rows)
 
 
 def test_an_agent_prompt_that_is_no_longer_measured_is_a_drop() -> None:

@@ -26,6 +26,10 @@ branch, not the copy in the pull request, so a pull request cannot lower the bar
 
     benchmark.py --baseline main-baseline.json --pr-baseline benchmarks/baseline.json
 
+On a pull request CI also runs main's copy of this script, not the pull request's, so a pull
+request cannot weaken the checker it is judged by (a change to this file takes effect after it
+merges; until main has the file, CI falls back to the pull request's copy and says so).
+
 That runs three comparisons: the run against main's baseline, the pull request's baseline file
 against main's (it may be raised, never lowered), and the run against the pull request's own
 baseline (so main's push check cannot fail after a merge). A maintainer can wave the first two
@@ -40,7 +44,9 @@ run cannot shrink it by accident.
 
 ``--agent CURRENT.json --baseline COMMITTED.json`` is the nightly check. Each prompt's agent
 tool-selection pass rate (``docs/results/agent-<harness>-latest.json``) must not drop below the
-committed file.
+committed file by more than one trial: agents are not deterministic, so a prompt regresses only
+when ``new_passed/new_total < base_rate - 1/new_total``. With 3 trials, one extra miss passes and
+two fail.
 
 Exit codes: 0 ok, 1 a score went down, 2 the input could not be read.
 """
@@ -55,7 +61,9 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+# CI runs main's copy of this file from a temporary directory (see the module docstring), so the
+# repository root cannot always be found from __file__: BENCHMARK_ROOT names it in that case.
+ROOT = Path(os.environ.get("BENCHMARK_ROOT") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "src"))
 
 SCHEMA_VERSION = 1
@@ -68,6 +76,7 @@ ABOUT = (
     "report; do not edit by hand. See the 'CI and the M3 benchmark' section of CONTRIBUTING.md."
 )
 UP, SAME, DOWN = "↑ improved", "= same", "↓ regressed"
+DIPPED = "~ dipped, within 1 trial"  # agent lane only: lower, but inside the tolerance
 MAX_DETAIL = 8  # ids listed per metric before "and N more"
 
 
@@ -267,6 +276,17 @@ def _show_case(entry: dict | None) -> str:
     return "missing" if entry is None else f"{entry['passed']}/{entry['total']}"
 
 
+def agent_case_dropped(before: dict, after: dict) -> bool:
+    """True when a prompt's pass rate fell by more than one trial's worth.
+
+    ``new_passed/new_total < base_rate - 1/new_total``. Agents are not deterministic, so with 3
+    trials one extra miss is tolerated and two are not. A prompt with no trials has dropped.
+    """
+    if not after["total"]:
+        return True
+    return _case_rate(after) < _case_rate(before) - Fraction(1, after["total"])
+
+
 def compare_agent(baseline: dict, current: dict) -> list[Row]:
     """Compare two ``agent-<harness>-latest.json`` documents prompt by prompt."""
     rows = []
@@ -282,7 +302,12 @@ def compare_agent(baseline: dict, current: dict) -> list[Row]:
             )
         else:
             old, new = _case_rate(before), _case_rate(after)
-            status = DOWN if new < old else UP if new > old else SAME
+            if agent_case_dropped(before, after):
+                status = DOWN
+            elif new < old:
+                status = DIPPED
+            else:
+                status = UP if new > old else SAME
             rows.append(Row(label, _show_case(before), _show_case(after), status))
     return rows
 
@@ -507,14 +532,14 @@ def run_agent(args: argparse.Namespace) -> int:
     print(f"Agent tool-selection pass rates ({harness}): {args.agent} vs the committed file\n")
     print(render_table(rows))
     summary = [
-        f"### Agent pass rates ({harness}): must not drop below the committed file\n",
+        f"### Agent pass rates ({harness}): at most one trial below the committed file\n",
         render_table(rows),
     ]
     down = regressions(rows)
     if down:
         text = (
             f"The {harness} agent lane picked the right tool less often than "
-            f"`docs/results/agent-{harness}-latest.json` records:\n\n"
+            f"`docs/results/agent-{harness}-latest.json` records, by more than one trial:\n\n"
             + "\n".join(f"- `{r.metric}`: {r.baseline} -> {r.now}" for r in down)
             + "\n\nThis run used "
             f"{current.get('trials', '?')} trial(s) per prompt against {base.get('trials', '?')} "

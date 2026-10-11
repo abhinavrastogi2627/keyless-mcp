@@ -7,8 +7,9 @@ name: Nightly
 #   agent  Real agents (Claude Code, Codex) pick tools from plain-English prompts, 3 trials each.
 #          This costs model tokens, so each matrix entry runs only when its secret is set and is
 #          skipped, with a notice, otherwise. Pass rates are uploaded as artifacts. Each prompt's
-#          pass rate must not drop below the committed docs/results/agent-<harness>-latest.json:
-#          the job fails if one does, and the drop is added to the upstream-drift issue.
+#          pass rate must not drop more than one trial below the committed
+#          docs/results/agent-<harness>-latest.json (agents are not deterministic): the job fails
+#          if one does, and the drop is added to the upstream-drift issue.
 #
 # Refreshing ADAPTERS.md with new pass rates is a maintainer step, not automatic (nothing here
 # commits to main): download the `agent-results-<harness>` artifact, copy the JSON into

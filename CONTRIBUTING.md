@@ -117,7 +117,7 @@ The agent tests (`make agent`) check that a real model picks the right tool from
 
 CI runs the M3 tests on every pull request to main, and again on every push to main. It also runs when a label is added to or removed from a pull request. If this is your first pull request from a brand-new GitHub account, GitHub may hold the run until a maintainer approves it, so the checks can take a little while to appear.
 
-The rule: **benchmark scores must not go down.** A pull request can raise them or leave them where they are. CI compares your run with `benchmarks/baseline.json` as it stands on main and fails the check "M3 benchmark (scores must not go down)" if any score is lower.
+The rule: **benchmark scores must not go down.** A pull request can raise them or leave them where they are. CI compares your run with `benchmarks/baseline.json` as it stands on main and fails the check "M3 benchmark (scores must not go down)" if any score is lower. CI also judges your pull request with main's copy of `scripts/benchmark.py`, so a change to the checker takes effect after it merges.
 
 The benchmark has five parts. The first four come from the M3 report of `make test` and run offline on every pull request.
 
@@ -125,7 +125,7 @@ The benchmark has five parts. The first four come from the M3 report of `make te
 2. M3 server calls. For each adapter, the number of tests that called the server through M3 must not drop, and neither must the total number of M3 executions. This catches a test that quietly stops exercising the server.
 3. Evaluator pass rates. M3's own checks on those calls, such as `m3.matcher.to_have_tool_call.v1`, must pass as often as before.
 4. Tool catalog. The set of tools must not shrink. Removing or renaming a tool counts.
-5. Agent tool selection. This runs nightly on main, because it needs model credentials. Each prompt's pass rate must not fall below the one in `docs/results/agent-<harness>-latest.json`. Pull requests do not run it.
+5. Agent tool selection. This runs nightly on main, because it needs model credentials. Each prompt's pass rate must not fall more than one trial below the one in `docs/results/agent-<harness>-latest.json`, because agents are not deterministic: with 3 trials per prompt, one extra miss is tolerated and two are not. Pull requests do not run it.
 
 To check your own change, run the tests and then the benchmark:
 
