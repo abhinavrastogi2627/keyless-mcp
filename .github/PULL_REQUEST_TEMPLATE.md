@@ -8,6 +8,7 @@ Closes #
 
 - [ ] I linked the issue this pull request closes, and I had claimed it
 - [ ] `make test` passes on my machine
+- [ ] `make benchmark` passes: benchmark scores did not go down (if I added an adapter, I ran `make benchmark-baseline` and committed `benchmarks/baseline.json`; if a drop is intended, I explained it below)
 - [ ] Cassettes are recorded and committed (`make record ADAPTER=<name>`), and I read them before committing
 - [ ] `make adapters-md` was run and `ADAPTERS.md` is part of this pull request
 - [ ] `make lint` passes

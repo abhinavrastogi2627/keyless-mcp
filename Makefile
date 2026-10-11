@@ -8,12 +8,13 @@ TOOLSET ?= dev
 HARNESS ?= claude
 MODEL ?= sonnet
 TRIALS ?= 1
+BENCH_ARGS ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help setup test test-live agent record new-adapter adapters-md lint fmt ui run tools
+.PHONY: help setup test benchmark benchmark-baseline test-live agent record new-adapter adapters-md lint fmt ui run tools
 
 help: ## List the available commands
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-12s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-18s %s\n", $$1, $$2}'
 
 setup: ## Install everything (Python 3.12 venv, dependencies, M3 SDK) and check it works
 	uv sync --locked
@@ -22,6 +23,13 @@ setup: ## Install everything (Python 3.12 venv, dependencies, M3 SDK) and check 
 
 test: ## Run all tests offline (replays cassettes; no network, no API keys)
 	KEYLESS_MCP_HTTP_MODE=replay $(M3) test --python $(PY) -- m3_tests -m "not live and not agent" -q
+	@echo "tip: run 'make benchmark' to check that the M3 benchmark scores did not go down (CI does)."
+
+benchmark: ## Check the last M3 run against the baseline: benchmark scores must not go down
+	uv run python scripts/benchmark.py --check $(BENCH_ARGS)
+
+benchmark-baseline: ## Save the last M3 run as benchmarks/baseline.json to lock in a higher score
+	uv run python scripts/benchmark.py --update $(BENCH_ARGS)
 
 test-live: ## Run the live smoke tests against the real APIs (needs network)
 	KEYLESS_MCP_HTTP_MODE=live $(M3) test --python $(PY) -- m3_tests -m "live and not agent" -q

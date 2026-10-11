@@ -1,10 +1,24 @@
 name: CI
 
-# Offline checks on every pull request, including pull requests from forks. Nothing here uses a
-# secret and nothing calls a live API or a model: the M3 suite replays recorded cassettes.
+# Offline checks on every pull request to main, including pull requests from forks. Nothing here
+# uses a secret and nothing calls a live API or a model: the M3 suite replays recorded cassettes.
 # (The live-API and real-agent lanes are in nightly.yml.)
+#
+# The benchmark job is the gate: benchmark scores must not go down. It reads the M3 report that
+# the m3 job uploads and compares it with benchmarks/baseline.json and scripts/benchmark.py as
+# they are on the base side of the pull request's merge commit (its first parent), not with the
+# copies in the pull request. That guards against accidental or casual edits, such as lowering
+# the baseline to get a run through. It is not a security boundary: a pull request runs its own
+# workflow file, and its own test code runs in the m3 job that writes the report, so a hostile
+# change can get around any check in here. Maintainer review (see .github/CODEOWNERS and branch
+# protection in docs/launch/checklist.md) is the real control. A change to the checker takes
+# effect after it merges. A maintainer can allow an intentional drop by labelling the pull
+# request benchmark-change-approved, which is why the `labeled` and `unlabeled` types are listed:
+# adding the label re-runs the check.
 on:
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -85,6 +99,9 @@ jobs:
             echo "Every keyless-mcp tool is exercised through an M3 MCP client against recorded"
             echo "cassettes: no network, no API keys. Download the \`m3-reports\` artifact and open"
             echo "it with \`m3 ui\` to see each tool call."
+            echo
+            echo "Benchmark scores must not go down: the separate \"M3 benchmark\" check compares this"
+            echo "run with the baseline on main (see CONTRIBUTING.md, \"CI and the M3 benchmark\")."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload M3 reports
         if: always()
@@ -94,6 +111,72 @@ jobs:
           path: .m3/reports/
           if-no-files-found: warn
           retention-days: 14
+
+  benchmark:
+    name: M3 benchmark (scores must not go down)
+    needs: m3
+    # Runs even when the m3 job failed, so the score table is on the pull request either way.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # On a pull request this is the merge commit; depth 2 brings in both parents, and the
+          # first one is the base the pull request was merged onto.
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.9.28"
+      - name: Install the project
+        # The checker reads the tool registry, so the package and its dependencies are needed.
+        run: uv sync --locked --no-dev
+      - name: Download the M3 reports from the m3 job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: m3-reports
+          path: .m3/reports
+      - name: Compare with the baseline
+        # The labels reach the script through the environment, never through the command text.
+        # Only people with triage access or above can apply a label, so the pull request cannot
+        # add it. The checker writes the score table to the job summary.
+        env:
+          BENCHMARK_PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != pull_request ]; then
+            # Push to main: the committed checker and the baseline that was just committed.
+            .venv/bin/python scripts/benchmark.py
+            exit 0
+          fi
+          # Pull request: judge it with the checker and the baseline from the base side of the
+          # merge commit (HEAD^1), not the copies in this pull request, so editing either cannot
+          # lower the bar by accident. HEAD^1 is the base as it was when this merge commit was
+          # built, not main's moving tip. A change to the checker takes effect after it merges.
+          if ! git rev-parse -q --verify 'HEAD^2' >/dev/null; then
+            echo "::error::HEAD is not a merge commit, so the base side cannot be found."
+            exit 1
+          fi
+          checker=scripts/benchmark.py
+          if git cat-file -e 'HEAD^1:scripts/benchmark.py' 2>/dev/null; then
+            git show 'HEAD^1:scripts/benchmark.py' > "${RUNNER_TEMP}/benchmark_base.py"
+            checker="${RUNNER_TEMP}/benchmark_base.py"
+          else
+            echo "::notice title=No checker on the base::The base branch has no scripts/benchmark.py yet, so this pull request is checked with its own copy."
+          fi
+          # The base copy lives outside the repository, so tell it where the repository is.
+          export BENCHMARK_ROOT="${GITHUB_WORKSPACE}"
+          if git cat-file -e 'HEAD^1:benchmarks/baseline.json' 2>/dev/null; then
+            git show 'HEAD^1:benchmarks/baseline.json' > "${RUNNER_TEMP}/base-baseline.json"
+            .venv/bin/python "${checker}" \
+              --baseline "${RUNNER_TEMP}/base-baseline.json" --pr-baseline benchmarks/baseline.json
+          else
+            echo "::notice title=No baseline on the base::The base branch has no benchmarks/baseline.json yet, so this pull request is compared with its own copy."
+            .venv/bin/python "${checker}"
+          fi
 
   docker:
     name: Container image builds and starts
