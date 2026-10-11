@@ -102,6 +102,7 @@ LABELS=(
   "area:docs|0075ca|Documentation"
   "area:testing|c2e0c6|Tests, M3 and the agent lane"
   "area:dx|c5def5|Developer and user experience"
+  "benchmark-change-approved|fef2c0|A maintainer allows this pull request to lower the M3 benchmark baseline"
 )
 
 for entry in "${LABELS[@]}"; do
