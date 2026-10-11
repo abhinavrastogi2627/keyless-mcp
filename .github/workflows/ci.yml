@@ -4,10 +4,13 @@ name: CI
 # uses a secret and nothing calls a live API or a model: the M3 suite replays recorded cassettes.
 # (The live-API and real-agent lanes are in nightly.yml.)
 #
-# The M3 job ends with the benchmark gate: benchmark scores must not go down. A pull request is
-# compared with the baseline on main, not with its own copy of benchmarks/baseline.json. A
-# maintainer can allow an intentional drop by labelling the pull request benchmark-change-approved,
-# which is why the `labeled` and `unlabeled` types are listed: adding the label re-runs the check.
+# The benchmark job is the gate: benchmark scores must not go down. It reads the M3 report that
+# the m3 job uploads. A pull request is compared with the baseline on main, not with its own copy
+# of benchmarks/baseline.json, and it is judged by main's copy of scripts/benchmark.py, so a pull
+# request cannot weaken the checker. A change to the checker therefore takes effect after it
+# merges. A maintainer can allow an intentional drop by labelling the pull request
+# benchmark-change-approved, which is why the `labeled` and `unlabeled` types are listed: adding
+# the label re-runs the check.
 on:
   pull_request:
     branches: [main]
@@ -83,30 +86,6 @@ jobs:
       - name: Check every adapter was tested through M3
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         run: .venv/bin/python scripts/check_feature_results.py
-      - name: M3 benchmark (scores must not go down)
-        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
-        # The labels reach the script through the environment, never through the command text.
-        # Only people with triage access or above can apply a label, so the pull request cannot add it.
-        env:
-          BENCHMARK_PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" != pull_request ]; then
-            # Push to main: compare with the baseline that was just committed.
-            .venv/bin/python scripts/benchmark.py
-            exit 0
-          fi
-          # Pull request: compare with the baseline on the base branch, not the copy in this pull
-          # request, so a pull request cannot lower the bar by editing the file.
-          git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
-          if git cat-file -e FETCH_HEAD:benchmarks/baseline.json 2>/dev/null; then
-            git show FETCH_HEAD:benchmarks/baseline.json > "${RUNNER_TEMP}/main-baseline.json"
-            .venv/bin/python scripts/benchmark.py \
-              --baseline "${RUNNER_TEMP}/main-baseline.json" --pr-baseline benchmarks/baseline.json
-          else
-            echo "::notice title=No baseline on ${GITHUB_BASE_REF}::${GITHUB_BASE_REF} has no benchmarks/baseline.json yet, so this pull request is compared with its own copy."
-            .venv/bin/python scripts/benchmark.py
-          fi
       - name: Job summary
         if: always()
         run: |
@@ -117,8 +96,8 @@ jobs:
             echo "cassettes: no network, no API keys. Download the \`m3-reports\` artifact and open"
             echo "it with \`m3 ui\` to see each tool call."
             echo
-            echo "Benchmark scores must not go down: the M3 benchmark step compares this run with"
-            echo "the baseline on main (see CONTRIBUTING.md, \"CI and the M3 benchmark\")."
+            echo "Benchmark scores must not go down: the separate \"M3 benchmark\" check compares this"
+            echo "run with the baseline on main (see CONTRIBUTING.md, \"CI and the M3 benchmark\")."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload M3 reports
         if: always()
@@ -128,6 +107,65 @@ jobs:
           path: .m3/reports/
           if-no-files-found: warn
           retention-days: 14
+
+  benchmark:
+    name: M3 benchmark (scores must not go down)
+    needs: m3
+    # Runs even when the m3 job failed, so the score table is on the pull request either way.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.9.28"
+      - name: Install the project
+        # The checker reads the tool registry, so the package and its dependencies are needed.
+        run: uv sync --locked --no-dev
+      - name: Download the M3 reports from the m3 job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: m3-reports
+          path: .m3/reports
+      - name: Compare with the baseline
+        # The labels reach the script through the environment, never through the command text.
+        # Only people with triage access or above can apply a label, so the pull request cannot
+        # add it. The checker writes the score table to the job summary.
+        env:
+          BENCHMARK_PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != pull_request ]; then
+            # Push to main: the committed checker and the baseline that was just committed.
+            .venv/bin/python scripts/benchmark.py
+            exit 0
+          fi
+          # Pull request: judge it with main's checker and main's baseline, not the copies in this
+          # pull request, so editing either cannot lower the bar. A change to the checker takes
+          # effect after it merges.
+          git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
+          checker=scripts/benchmark.py
+          if git cat-file -e FETCH_HEAD:scripts/benchmark.py 2>/dev/null; then
+            git show FETCH_HEAD:scripts/benchmark.py > "${RUNNER_TEMP}/benchmark_main.py"
+            checker="${RUNNER_TEMP}/benchmark_main.py"
+          else
+            echo "::notice title=No checker on ${GITHUB_BASE_REF}::${GITHUB_BASE_REF} has no scripts/benchmark.py yet, so this pull request is checked with its own copy."
+          fi
+          # Main's copy lives outside the repository, so tell it where the repository is.
+          export BENCHMARK_ROOT="${GITHUB_WORKSPACE}"
+          if git cat-file -e FETCH_HEAD:benchmarks/baseline.json 2>/dev/null; then
+            git show FETCH_HEAD:benchmarks/baseline.json > "${RUNNER_TEMP}/main-baseline.json"
+            .venv/bin/python "${checker}" \
+              --baseline "${RUNNER_TEMP}/main-baseline.json" --pr-baseline benchmarks/baseline.json
+          else
+            echo "::notice title=No baseline on ${GITHUB_BASE_REF}::${GITHUB_BASE_REF} has no benchmarks/baseline.json yet, so this pull request is compared with its own copy."
+            .venv/bin/python "${checker}"
+          fi
 
   docker:
     name: Container image builds and starts
