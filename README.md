@@ -5,7 +5,7 @@
 One MCP server that gives your agent tools over free public APIs such as arXiv, Wikipedia, PyPI, npm, OSV, Open-Meteo, the World Bank and Hacker News. It needs no API keys and no accounts.
 
 [![CI](https://github.com/sineframe/keyless-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sineframe/keyless-mcp/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/keyless-mcp)](https://pypi.org/project/keyless-mcp/)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fsineframe%2Fkeyless-mcp%2Fmain%2Fpyproject.toml)](https://github.com/sineframe/keyless-mcp/blob/main/pyproject.toml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/sineframe/keyless-mcp/blob/main/LICENSE)
 [![Tested with M3](https://img.shields.io/badge/tested%20with-M3-6f42c1)](https://github.com/sineframe/m3)
 [![Hacktoberfest](https://img.shields.io/badge/hacktoberfest-friendly-ff7518)](https://github.com/sineframe/keyless-mcp/issues?q=is%3Aissue+is%3Aopen+label%3Ahacktoberfest)
