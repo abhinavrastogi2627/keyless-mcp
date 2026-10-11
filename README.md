@@ -212,6 +212,7 @@ Until an adapter lands in one of those last three, selecting only that toolset s
 Every tool is tested with [M3](https://github.com/sineframe/m3), a testing tool for MCP servers and agents. The tests start the real server over stdio, call each tool through an MCP client, and check the results.
 
 - On every pull request, the whole suite runs offline. The server replays recorded HTTP responses (cassettes), so CI needs no network and no secrets, and a fork's pull request runs the same checks as a maintainer's.
+- Benchmark scores must not go down: CI compares each pull request's M3 results with `benchmarks/baseline.json` on main and fails if any score is lower (`make test && make benchmark` checks yours, and [CONTRIBUTING.md](https://github.com/sineframe/keyless-mcp/blob/main/CONTRIBUTING.md) explains it).
 - Every night, a live lane calls the real APIs. If an upstream changes shape or goes down, the job opens an `upstream-drift` issue.
 - Every night, an agent lane gives Claude Code and Codex plain-English questions that never name a tool, such as "Are there known security vulnerabilities in version 2.4.1 of the PyPI package jinja2?". It checks whether the agent picked the right tool and made a successful call, over 3 trials per prompt. This lane costs model tokens, so it runs only where the maintainers have set credentials.
 

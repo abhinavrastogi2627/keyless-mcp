@@ -102,6 +102,8 @@ several trials points at the descriptions.
 `docs/results/agent-codex-latest.json` holds the most recent full run (Codex, 1 trial per prompt):
 per prompt, the expected tool and passed/total trials. It is a snapshot of one model on one day.
 
+The nightly agent job compares each prompt's pass rate with the committed file and fails if one has dropped (`scripts/benchmark.py --agent`). It does not commit anything: after a deliberate improvement, copy the new file from the `agent-results-<harness>` artifact into `docs/results/` and run `make adapters-md`. Pull requests never run this lane. Their benchmark is the offline one in [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Adding a prompt
 
 Add a `Case(...)` to `CASES` in `test_tool_selection.py`: an id, a plain-English prompt that does
