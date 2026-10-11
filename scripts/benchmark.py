@@ -22,13 +22,17 @@ such database, a run id is not something you can commit, and the comparison does
 tool catalog or per-adapter coverage. So the baseline is a small committed JSON file instead.
 
 CI on a pull request (see .github/workflows/ci.yml) compares against the baseline from the base
-branch, not the copy in the pull request, so a pull request cannot lower the bar by editing it::
+side of the pull request's merge commit, not the copy in the pull request, so lowering the file
+cannot get a run through by accident::
 
-    benchmark.py --baseline main-baseline.json --pr-baseline benchmarks/baseline.json
+    benchmark.py --baseline base-baseline.json --pr-baseline benchmarks/baseline.json
 
-On a pull request CI also runs main's copy of this script, not the pull request's, so a pull
-request cannot weaken the checker it is judged by (a change to this file takes effect after it
-merges; until main has the file, CI falls back to the pull request's copy and says so).
+CI also runs the base side's copy of this script, so a change to this file takes effect after it
+merges; until the base has the file, CI falls back to the pull request's copy and says so. Be
+clear about what this is: a guard against accidental or casual edits. It is not a security
+boundary. A pull request runs its own workflow file, and its own test code runs in the job that
+writes the M3 report, so a hostile change can get around any check here. Maintainer review
+(.github/CODEOWNERS, branch protection) is the real control.
 
 That runs three comparisons: the run against main's baseline, the pull request's baseline file
 against main's (it may be raised, never lowered), and the run against the pull request's own
@@ -77,6 +81,7 @@ ABOUT = (
 )
 UP, SAME, DOWN = "↑ improved", "= same", "↓ regressed"
 DIPPED = "~ dipped, within 1 trial"  # agent lane only: lower, but inside the tolerance
+MANY_MISSING = 10  # this many tests missing from a run suggests a partial run
 MAX_DETAIL = 8  # ids listed per metric before "and N more"
 
 
@@ -377,6 +382,10 @@ LOWERED_HINT = (
     "(`git checkout origin/main -- benchmarks/baseline.json`). If the drop is intentional, say\n"
     f"why in the pull request and ask a maintainer for the `{APPROVAL_LABEL}` label."
 )
+PARTIAL_RUN_HINT = (
+    "Many baseline tests are missing from this run. Did you run the full `make test` first?\n"
+    "`make benchmark` reads the latest M3 report, so a run of only some tests looks like a drop."
+)
 REGENERATE_HINT = (
     "Regenerate the file with `make test && make benchmark-baseline` (add\n"
     "`BENCH_ARGS=--allow-lower` if the drop is intentional) and commit benchmarks/baseline.json."
@@ -411,6 +420,12 @@ def current_metrics(report: Path | None, reports_dir: Path) -> tuple[Path, dict]
     return path, extract_metrics(feedback, registry_tools())
 
 
+def _partial_run(rows: list[Row]) -> bool:
+    """True when many baseline tests are missing from the run, as after running only some tests."""
+    missing = sum(d.endswith("missing from this run") for row in rows for d in row.detail)
+    return missing >= MANY_MISSING
+
+
 @dataclass
 class Verdict:
     rows: list[Row]
@@ -442,9 +457,10 @@ def judge(
     else:
         if run_drops:
             failed = True
+            hint = f"{PARTIAL_RUN_HINT}\n\n{FIX_HINT}" if _partial_run(run_drops) else FIX_HINT
             messages.append(
                 "FAIL: benchmark scores went down against the base branch:\n"
-                f"{describe(run_drops)}\n\n{FIX_HINT}"
+                f"{describe(run_drops)}\n\n{hint}"
             )
         if file_drops:
             failed = True

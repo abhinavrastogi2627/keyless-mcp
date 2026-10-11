@@ -337,3 +337,20 @@ def test_a_lowered_baseline_file_gets_its_own_message(baseline: dict) -> None:
     verdict = bm.judge(baseline, baseline, pr_base=lower(baseline))
     assert "baseline.json in this pull request is lower" in verdict.messages[0]
     assert "git checkout origin/main -- benchmarks/baseline.json" in verdict.messages[0]
+
+
+def test_many_missing_tests_get_a_partial_run_hint(baseline: dict) -> None:
+    many = [f"m3_tests/adapters/osv/test_osv.py::test_{i}" for i in range(bm.MANY_MISSING)]
+    wide = copy.deepcopy(baseline)
+    wide["passing_tests"] = sorted([*wide["passing_tests"], *many])
+    verdict = bm.judge(wide, baseline)
+    assert verdict.failed
+    assert "did you run the full `make test` first" in verdict.messages[0].lower()
+    assert "reads the latest M3 report" in verdict.messages[0]
+
+
+def test_a_single_missing_test_gets_no_partial_run_hint(baseline: dict) -> None:
+    wide = copy.deepcopy(baseline)
+    wide["passing_tests"] = sorted([*wide["passing_tests"], "m3_tests/core/test_x.py::test_gone"])
+    verdict = bm.judge(wide, baseline)
+    assert verdict.failed and "full `make test`" not in verdict.messages[0]
