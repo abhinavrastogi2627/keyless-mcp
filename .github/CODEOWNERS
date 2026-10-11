@@ -1,0 +1,8 @@
+# Changes to the benchmark gate and what it depends on need a maintainer's review. Pair this with
+# branch protection that requires code-owner review (docs/launch/checklist.md).
+/.github/ @rishhavv
+/scripts/benchmark.py @rishhavv
+/benchmarks/ @rishhavv
+/m3_tests/**/conftest.py @rishhavv
+/m3_tests/_support/ @rishhavv
+/Makefile @rishhavv

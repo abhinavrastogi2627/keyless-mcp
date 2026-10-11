@@ -5,12 +5,16 @@ name: CI
 # (The live-API and real-agent lanes are in nightly.yml.)
 #
 # The benchmark job is the gate: benchmark scores must not go down. It reads the M3 report that
-# the m3 job uploads. A pull request is compared with the baseline on main, not with its own copy
-# of benchmarks/baseline.json, and it is judged by main's copy of scripts/benchmark.py, so a pull
-# request cannot weaken the checker. A change to the checker therefore takes effect after it
-# merges. A maintainer can allow an intentional drop by labelling the pull request
-# benchmark-change-approved, which is why the `labeled` and `unlabeled` types are listed: adding
-# the label re-runs the check.
+# the m3 job uploads and compares it with benchmarks/baseline.json and scripts/benchmark.py as
+# they are on the base side of the pull request's merge commit (its first parent), not with the
+# copies in the pull request. That guards against accidental or casual edits, such as lowering
+# the baseline to get a run through. It is not a security boundary: a pull request runs its own
+# workflow file, and its own test code runs in the m3 job that writes the report, so a hostile
+# change can get around any check in here. Maintainer review (see .github/CODEOWNERS and branch
+# protection in docs/launch/checklist.md) is the real control. A change to the checker takes
+# effect after it merges. A maintainer can allow an intentional drop by labelling the pull
+# request benchmark-change-approved, which is why the `labeled` and `unlabeled` types are listed:
+# adding the label re-runs the check.
 on:
   pull_request:
     branches: [main]
@@ -120,6 +124,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # On a pull request this is the merge commit; depth 2 brings in both parents, and the
+          # first one is the base the pull request was merged onto.
+          fetch-depth: 2
           persist-credentials: false
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
@@ -145,25 +152,29 @@ jobs:
             .venv/bin/python scripts/benchmark.py
             exit 0
           fi
-          # Pull request: judge it with main's checker and main's baseline, not the copies in this
-          # pull request, so editing either cannot lower the bar. A change to the checker takes
-          # effect after it merges.
-          git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
-          checker=scripts/benchmark.py
-          if git cat-file -e FETCH_HEAD:scripts/benchmark.py 2>/dev/null; then
-            git show FETCH_HEAD:scripts/benchmark.py > "${RUNNER_TEMP}/benchmark_main.py"
-            checker="${RUNNER_TEMP}/benchmark_main.py"
-          else
-            echo "::notice title=No checker on ${GITHUB_BASE_REF}::${GITHUB_BASE_REF} has no scripts/benchmark.py yet, so this pull request is checked with its own copy."
+          # Pull request: judge it with the checker and the baseline from the base side of the
+          # merge commit (HEAD^1), not the copies in this pull request, so editing either cannot
+          # lower the bar by accident. HEAD^1 is the base as it was when this merge commit was
+          # built, not main's moving tip. A change to the checker takes effect after it merges.
+          if ! git rev-parse -q --verify 'HEAD^2' >/dev/null; then
+            echo "::error::HEAD is not a merge commit, so the base side cannot be found."
+            exit 1
           fi
-          # Main's copy lives outside the repository, so tell it where the repository is.
-          export BENCHMARK_ROOT="${GITHUB_WORKSPACE}"
-          if git cat-file -e FETCH_HEAD:benchmarks/baseline.json 2>/dev/null; then
-            git show FETCH_HEAD:benchmarks/baseline.json > "${RUNNER_TEMP}/main-baseline.json"
-            .venv/bin/python "${checker}" \
-              --baseline "${RUNNER_TEMP}/main-baseline.json" --pr-baseline benchmarks/baseline.json
+          checker=scripts/benchmark.py
+          if git cat-file -e 'HEAD^1:scripts/benchmark.py' 2>/dev/null; then
+            git show 'HEAD^1:scripts/benchmark.py' > "${RUNNER_TEMP}/benchmark_base.py"
+            checker="${RUNNER_TEMP}/benchmark_base.py"
           else
-            echo "::notice title=No baseline on ${GITHUB_BASE_REF}::${GITHUB_BASE_REF} has no benchmarks/baseline.json yet, so this pull request is compared with its own copy."
+            echo "::notice title=No checker on the base::The base branch has no scripts/benchmark.py yet, so this pull request is checked with its own copy."
+          fi
+          # The base copy lives outside the repository, so tell it where the repository is.
+          export BENCHMARK_ROOT="${GITHUB_WORKSPACE}"
+          if git cat-file -e 'HEAD^1:benchmarks/baseline.json' 2>/dev/null; then
+            git show 'HEAD^1:benchmarks/baseline.json' > "${RUNNER_TEMP}/base-baseline.json"
+            .venv/bin/python "${checker}" \
+              --baseline "${RUNNER_TEMP}/base-baseline.json" --pr-baseline benchmarks/baseline.json
+          else
+            echo "::notice title=No baseline on the base::The base branch has no benchmarks/baseline.json yet, so this pull request is compared with its own copy."
             .venv/bin/python "${checker}"
           fi
 

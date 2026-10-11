@@ -19,7 +19,7 @@ repeated here so you do not have to hunt for them.
 - [ ] Enable Discussions. The issue template config links to it.
 - [ ] Enable private vulnerability reporting, which SECURITY.md mentions.
 - [ ] Install the [all-contributors bot](https://allcontributors.org/docs/en/bot/installation) on the repository. The README's contributors section tells people to comment `@all-contributors please add @handle for code`, which only works once the bot is there.
-- [ ] Branch protection on `main`: require the `Lint and generated files`, `M3 tests (offline replay)` and `Container image builds and starts` checks from `ci.yml`.
+- [ ] Branch protection on `main`: require pull requests, require the checks `M3 tests (offline replay)`, `Lint and generated files`, `Container image builds and starts` and `M3 benchmark (scores must not go down)` from `ci.yml`, and require review from code owners (`.github/CODEOWNERS`). The benchmark check cannot stop a hostile pull request on its own, because a pull request runs its own workflow file and its own test code. Code-owner review of `.github/`, `scripts/benchmark.py`, `benchmarks/`, the conftest files, `m3_tests/_support/` and the Makefile is the control that does.
 - [ ] Confirm CI is green on the first push, and that the CI badge in the README turns green.
 
 ## 3. Release setup (maintainer steps from the workflow headers)

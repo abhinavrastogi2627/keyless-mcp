@@ -117,7 +117,7 @@ The agent tests (`make agent`) check that a real model picks the right tool from
 
 CI runs the M3 tests on every pull request to main, and again on every push to main. It also runs when a label is added to or removed from a pull request. If this is your first pull request from a brand-new GitHub account, GitHub may hold the run until a maintainer approves it, so the checks can take a little while to appear.
 
-The rule: **benchmark scores must not go down.** A pull request can raise them or leave them where they are. CI compares your run with `benchmarks/baseline.json` as it stands on main and fails the check "M3 benchmark (scores must not go down)" if any score is lower. CI also judges your pull request with main's copy of `scripts/benchmark.py`, so a change to the checker takes effect after it merges.
+The rule: **benchmark scores must not go down.** A pull request can raise them or leave them where they are. CI compares your run with `benchmarks/baseline.json` as it stands on the base branch and fails the check "M3 benchmark (scores must not go down)" if any score is lower. CI reads the baseline and the checker from the branch your pull request is merged onto, not from your copy. That guards against accidental or casual edits. Maintainer review is the real control, and the benchmark files, the workflows and the test fixtures have code owners for that reason.
 
 The benchmark has five parts. The first four come from the M3 report of `make test` and run offline on every pull request.
 
@@ -137,9 +137,11 @@ make test && make benchmark
 
 A new adapter raises the score: more passing tests, more M3 calls, more tools. After `make test`, run `make benchmark-baseline` and commit `benchmarks/baseline.json`, so the higher score is locked in. If you skip this, CI still passes, but a later change could remove your tests without anyone being told. If the baseline file conflicts when you merge main, merge first, then run `make test && make benchmark-baseline` again and commit the result.
 
-Do not lower `benchmarks/baseline.json` to get a run through. CI reads the baseline from main, not from your pull request, so editing it does not help. It also fails a pull request that lowers the file.
+Do not lower `benchmarks/baseline.json` to get a run through. CI compares with the baseline on the base branch, so editing your copy does not change the result, and it fails a pull request that lowers the file.
 
 Sometimes a drop is intended. If you remove an adapter because its API is gone, the passing tests and tools for it go away on purpose. Say so in the pull request description, run `make benchmark-baseline BENCH_ARGS=--allow-lower`, and commit the lower file. A maintainer then adds the `benchmark-change-approved` label, which re-runs the check and lets the drop through. Only maintainers can add that label. The lowered baseline file still has to match what your run delivers.
+
+A change to `scripts/benchmark.py` or to the baseline file's schema is judged by the base branch's checker, so it needs a maintainer and lands in two steps: the change merges first, and the next pull request is checked with it.
 
 If the benchmark fails in CI and passes on your machine, say so in the pull request. The `m3-reports` artifact on the run has the report CI used.
 
