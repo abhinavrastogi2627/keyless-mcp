@@ -1,0 +1,10 @@
+# Adapter metadata. Every field is required. See docs/adapter-contract.md.
+name: xkcd
+title: xkcd
+description: Comic titles, alt text, dates and image links from the xkcd JSON interface.
+toolset: fun
+base_url: https://xkcd.com
+docs_url: https://xkcd.com/json.html
+# The API docs publish no numeric quota; conservatively space requests by two seconds.
+rate_limit_per_minute: 30
+author: abhinavrastogi2627
