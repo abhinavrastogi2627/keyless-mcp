@@ -4,7 +4,7 @@
     "m3.matcher.to_have_tool_call.v1": 1.0
   },
   "m3_calls": {
-    "executions_total": 83,
+    "executions_total": 90,
     "tests_with_execution": {
       "adapters/arxiv": 6,
       "adapters/hackernews": 8,
@@ -14,6 +14,7 @@
       "adapters/pypi": 8,
       "adapters/wikipedia": 12,
       "adapters/world_bank": 13,
+      "adapters/xkcd": 7,
       "agent": 3,
       "core": 6
     }
@@ -102,6 +103,22 @@
     "m3_tests/adapters/world_bank/test_world_bank.py::test_invalid_input_is_rejected_before_any_request[world_bank_country_search-arguments0-name must not be empty]",
     "m3_tests/adapters/world_bank/test_world_bank.py::test_lists_both_country_tools_with_documented_inputs",
     "m3_tests/adapters/world_bank/test_world_bank.py::test_the_country_list_is_downloaded_once_per_process",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_catalog",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_latest_comic",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_nonpositive_number_is_refused[-1]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_nonpositive_number_is_refused[0]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_numbered_comic_is_documented_614",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_comic_through_mcp_with_recorded_responses",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[1-1-1]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[1000-404-405]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[1000-999-1000]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[403-403-403]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[404-403-403]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_excludes_missing_404[405-404-405]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_uses_latest_bound_and_fetches_chosen_comic[1]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_uses_latest_bound_and_fetches_chosen_comic[614]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_random_uses_latest_bound_and_fetches_chosen_comic[999]",
+    "m3_tests/adapters/xkcd/test_xkcd.py::test_unknown_comic_html_404_is_readable",
     "m3_tests/agent/test_fixture_agent.py::test_replay_never_reaches_the_network_for_an_unrecorded_request",
     "m3_tests/agent/test_fixture_agent.py::test_scripted_agent_queries_osv_for_a_vulnerable_package",
     "m3_tests/agent/test_fixture_agent.py::test_scripted_agent_reads_a_wikipedia_summary",
@@ -113,6 +130,7 @@
     "m3_tests/catalog/test_contract.py::test_adapter_has_an_m3_test_file_with_its_own_suite_name[pypi]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_an_m3_test_file_with_its_own_suite_name[wikipedia]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_an_m3_test_file_with_its_own_suite_name[world_bank]",
+    "m3_tests/catalog/test_contract.py::test_adapter_has_an_m3_test_file_with_its_own_suite_name[xkcd]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[arxiv]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[hackernews]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[npm]",
@@ -121,6 +139,7 @@
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[pypi]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[wikipedia]",
     "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[world_bank]",
+    "m3_tests/catalog/test_contract.py::test_adapter_has_at_least_one_cassette[xkcd]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[arxiv]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[hackernews]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[npm]",
@@ -129,6 +148,7 @@
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[pypi]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[wikipedia]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[world_bank]",
+    "m3_tests/catalog/test_contract.py::test_adapter_yaml_has_no_leftover_scaffold_placeholders[xkcd]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[arxiv]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[hackernews]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[npm]",
@@ -137,6 +157,7 @@
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[pypi]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[wikipedia]",
     "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[world_bank]",
+    "m3_tests/catalog/test_contract.py::test_adapter_yaml_is_valid_and_toolset_is_known[xkcd]",
     "m3_tests/catalog/test_contract.py::test_adapters_never_import_an_http_library",
     "m3_tests/catalog/test_contract.py::test_cassettes_contain_no_email_addresses",
     "m3_tests/catalog/test_contract.py::test_each_toolset_loads_exactly_its_own_adapters",
@@ -149,6 +170,7 @@
     "m3_tests/catalog/test_contract.py::test_every_tool_and_parameter_has_a_description[pypi]",
     "m3_tests/catalog/test_contract.py::test_every_tool_and_parameter_has_a_description[wikipedia]",
     "m3_tests/catalog/test_contract.py::test_every_tool_and_parameter_has_a_description[world_bank]",
+    "m3_tests/catalog/test_contract.py::test_every_tool_and_parameter_has_a_description[xkcd]",
     "m3_tests/catalog/test_contract.py::test_the_template_is_not_loaded_as_an_adapter",
     "m3_tests/core/test_cassette.py::test_emails_are_redacted_everywhere_in_a_stored_cassette",
     "m3_tests/core/test_cassette.py::test_json_response_round_trips_and_file_is_readable",
@@ -197,6 +219,7 @@
     "m3_tests/core/test_text.py::test_tidy_collapses_whitespace_and_none",
     "m3_tests/core/test_text.py::test_truncate_ends_with_an_ellipsis_within_the_limit",
     "m3_tests/core/test_toolsets.py::test_a_toolset_registers_exactly_its_own_adapters_tools[dev]",
+    "m3_tests/core/test_toolsets.py::test_a_toolset_registers_exactly_its_own_adapters_tools[fun]",
     "m3_tests/core/test_toolsets.py::test_a_toolset_registers_exactly_its_own_adapters_tools[geo]",
     "m3_tests/core/test_toolsets.py::test_a_toolset_registers_exactly_its_own_adapters_tools[news]",
     "m3_tests/core/test_toolsets.py::test_a_toolset_registers_exactly_its_own_adapters_tools[science]",
@@ -295,6 +318,8 @@
     "wikipedia_get_summary",
     "wikipedia_search",
     "world_bank_country_by_code",
-    "world_bank_country_search"
+    "world_bank_country_search",
+    "xkcd_get_comic",
+    "xkcd_get_random_comic"
   ]
 }

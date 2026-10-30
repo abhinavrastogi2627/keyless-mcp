@@ -6,9 +6,9 @@ Every adapter wraps a free public API that needs no key. Enable a group of them 
 `--toolsets` (or `KEYLESS_MCP_TOOLSETS`); the default is all. To add one, see
 [docs/adapter-contract.md](docs/adapter-contract.md).
 
-**8 adapters, 16 tools.**
+**9 adapters, 18 tools.**
 
-Toolsets with no adapters yet (they are valid for `--toolsets` and serve no tools until the first adapter lands): `finance`, `reference`, `fun`.
+Toolsets with no adapters yet (they are valid for `--toolsets` and serve no tools until the first adapter lands): `finance`, `reference`.
 
 ## science
 
@@ -45,6 +45,14 @@ News and community feeds.
 | Adapter | Tools | API docs | Author | Agent pass rate (codex) |
 |---|---|---|---|---|
 | **Hacker News** (`hackernews`)<br>Read the current top stories on Hacker News and fetch any story, comment, job or poll by id (official Firebase API). | `hackernews_top_stories`<br>`hackernews_get_item` | [docs](https://github.com/HackerNews/API) | [sineframe](https://github.com/sineframe) | 1/1 |
+
+## fun
+
+Games, trivia and entertainment.
+
+| Adapter | Tools | API docs | Author | Agent pass rate (codex) |
+|---|---|---|---|---|
+| **xkcd** (`xkcd`)<br>Comic titles, alt text, dates and image links from the xkcd JSON interface. | `xkcd_get_comic`<br>`xkcd_get_random_comic` | [docs](https://xkcd.com/json.html) | [abhinavrastogi2627](https://github.com/abhinavrastogi2627) | - |
 
 ## About the agent pass rate
 

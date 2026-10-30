@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://xkcd.com/info.0.json",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body_format": "json",
+    "body": {
+      "alt": "They initially thought the containment structure alone would be sufficient, but for good measure they decided to include the Elephant's Foot inside.",
+      "day": "26",
+      "img": "https://imgs.xkcd.com/comics/siege_engine.png",
+      "link": "",
+      "month": "10",
+      "news": "",
+      "num": 3316,
+      "safe_title": "Siege Engine",
+      "title": "Siege Engine",
+      "transcript": "",
+      "year": "2026"
+    }
+  }
+}
