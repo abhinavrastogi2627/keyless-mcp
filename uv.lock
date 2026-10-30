@@ -622,7 +622,7 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.4,<3" },
     { name = "pytest-xdist", specifier = ">=3" },
     { name = "ruff", specifier = ">=0.6" },
-    { name = "sf-m3", extras = ["pytest", "storage", "judge"], specifier = "==0.2.40" },
+    { name = "sf-m3", extras = ["pytest", "storage", "judge"], specifier = "==0.3.1" },
 ]
 
 [[package]]
@@ -1215,7 +1215,7 @@ wheels = [
 
 [[package]]
 name = "sf-m3"
-version = "0.2.40"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agent-client-protocol" },
@@ -1233,7 +1233,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/0d/ae93856452a2ec65088b742b79927c1c9e5c35e28f9a9bfd25762b972ead/sf_m3-0.2.40-py3-none-any.whl", hash = "sha256:75918f152c2f768f30dc1802498ac89c965a6621412436e8c300368837918baf", size = 721708, upload-time = "2026-10-10T17:46:56.329Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/20/ebf95771ba8767f5c8fc0bb27beb8b203c8693a4e455852e21716a2e8caa/sf_m3-0.3.1-py3-none-any.whl", hash = "sha256:b01ad99395ad7dbe26682d2b4d67655dd4f7f613d932c92d72349f015db41eaa", size = 725248, upload-time = "2026-10-11T10:40:05.887Z" },
 ]
 
 [package.optional-dependencies]
